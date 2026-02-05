@@ -402,14 +402,21 @@ if uploaded_file is not None:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         
-        # Statistiques globales (non filtrées)
-        st.subheader("📈 KPIs globaux (toutes données)")
+        # Statistiques globales (données filtrées)
+        st.subheader("📈 KPIs globaux (données filtrées)")
         k1, k2, k3, k4 = st.columns(4)
 
-        total_formations = len(df_filtered)
-        total_produits = df_filtered[produit_col].nunique() if produit_col and produit_col in df_filtered.columns else 0
-        total_centres = df_filtered[centre_col].nunique() if centre_col and centre_col in df_filtered.columns else 0
-        avg_prog_global = recurrence['nb_programmations'].mean() if len(recurrence) > 0 else 0
+        # Utiliser df_temp qui a déjà les mêmes filtres que recurrence_filtered
+        total_formations = len(df_temp) if 'df_temp' in locals() else len(df_filtered)
+        total_produits = recurrence_filtered[produit_col].nunique() if len(recurrence_filtered) > 0 else 0
+        
+        # Compter les centres uniques dans les données filtrées
+        if 'df_temp' in locals():
+            total_centres = df_temp[centre_col].nunique() if centre_col and centre_col in df_temp.columns else 0
+        else:
+            total_centres = df_filtered[centre_col].nunique() if centre_col and centre_col in df_filtered.columns else 0
+            
+        avg_prog_global = recurrence_filtered['nb_programmations'].mean() if len(recurrence_filtered) > 0 else 0
 
         with k1:
             st.metric("Total formations", f"{total_formations}")
@@ -422,8 +429,9 @@ if uploaded_file is not None:
 
         # Durée moyenne des formations si dates disponibles
         if date_debut_col and date_fin_col and date_debut_col in df_filtered.columns and date_fin_col in df_filtered.columns:
-            # Calculer la différence en jours (soustraction de deux colonnes datetime donne des timedelta)
-            df_durations = df_filtered[[date_debut_col, date_fin_col]].dropna()
+            # Utiliser df_temp si disponible (données filtrées) sinon df_filtered
+            df_durations_source = df_temp if 'df_temp' in locals() else df_filtered
+            df_durations = df_durations_source[[date_debut_col, date_fin_col]].dropna()
             if len(df_durations) > 0:
                 durations = (df_durations[date_fin_col] - df_durations[date_debut_col]).dt.days  # type: ignore
                 avg_duration = durations.mean()
