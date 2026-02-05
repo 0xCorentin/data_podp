@@ -290,8 +290,8 @@ if uploaded_file is not None:
         st.subheader("📊 Vue d'ensemble")
         m1, m2, m3, m4 = st.columns(4)
         
-        # Compter le nombre de combinaisons uniques (produit, centre) sans tenir compte des CAP
-        total_combos = recurrence_filtered[[produit_col, centre_col]].drop_duplicates().shape[0]
+        # Compter le nombre de produits uniques
+        total_combos = recurrence_filtered[produit_col].nunique()
         
         # Calculer la récurrence par PRODUIT (somme de toutes les programmations par produit)
         recurrence_par_produit = recurrence_filtered.groupby(produit_col)['nb_programmations'].sum().reset_index()
@@ -300,7 +300,7 @@ if uploaded_file is not None:
         taux_faible = (combos_faible / len(recurrence_par_produit) * 100) if len(recurrence_par_produit) > 0 else 0
         
         with m1:
-            st.metric("Combinaisons produit/centre", total_combos)
+            st.metric("Produits uniques", total_combos)
         with m2:
             st.metric("Récurrence < 3", combos_faible, delta=f"{taux_faible:.1f}%", delta_color="inverse")
         with m3:
@@ -339,11 +339,11 @@ if uploaded_file is not None:
             date_12mois = date_debut_ts + relativedelta(months=12)
             date_18mois = pd.Timestamp(date_fin_calculated)
             
-            # Compter les programmations dans chaque période
-            total_prog = len(df_temp)
-            prog_0_6 = len(df_temp[(df_temp[date_debut_col] >= date_debut_ts) & (df_temp[date_debut_col] < date_6mois)])
-            prog_6_12 = len(df_temp[(df_temp[date_debut_col] >= date_6mois) & (df_temp[date_debut_col] < date_12mois)])
-            prog_12_18 = len(df_temp[(df_temp[date_debut_col] >= date_12mois) & (df_temp[date_debut_col] <= date_18mois)])
+            # Compter les produits uniques dans chaque période
+            total_prog = df_temp[produit_col].nunique()
+            prog_0_6 = df_temp[(df_temp[date_debut_col] >= date_debut_ts) & (df_temp[date_debut_col] < date_6mois)][produit_col].nunique()
+            prog_6_12 = df_temp[(df_temp[date_debut_col] >= date_6mois) & (df_temp[date_debut_col] < date_12mois)][produit_col].nunique()
+            prog_12_18 = df_temp[(df_temp[date_debut_col] >= date_12mois) & (df_temp[date_debut_col] <= date_18mois)][produit_col].nunique()
             
             # Calculer les pourcentages
             pct_0_6 = (prog_0_6 / total_prog * 100) if total_prog > 0 else 0
@@ -353,11 +353,11 @@ if uploaded_file is not None:
             # Afficher les métriques
             col_t1, col_t2, col_t3 = st.columns(3)
             with col_t1:
-                st.metric("0-6 mois", f"{pct_0_6:.1f}%", f"{prog_0_6} prog.")
+                st.metric("0-6 mois", f"{pct_0_6:.1f}%", f"{prog_0_6} produits")
             with col_t2:
-                st.metric("6-12 mois", f"{pct_6_12:.1f}%", f"{prog_6_12} prog.")
+                st.metric("6-12 mois", f"{pct_6_12:.1f}%", f"{prog_6_12} produits")
             with col_t3:
-                st.metric("12-18 mois", f"{pct_12_18:.1f}%", f"{prog_12_18} prog.")
+                st.metric("12-18 mois", f"{pct_12_18:.1f}%", f"{prog_12_18} produits")
         
         # Afficher le tableau principal (sans la colonne CENTRE)
         st.subheader("📋 Récurrence par produit")
