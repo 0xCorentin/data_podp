@@ -133,8 +133,16 @@ if uploaded_file is not None:
         cap1_col = None
     
     if centre_col and produit_col:
-        # Grouper par produit et centre, compter les occurrences
-        recurrence = df_filtered.groupby([produit_col, centre_col], dropna=False).size().reset_index(name='nb_programmations')
+        # Grouper par produit, centre ET les colonnes CAP pour différencier les programmations selon leurs CAP
+        group_cols = [produit_col, centre_col]
+        
+        # Ajouter toutes les colonnes CAP au groupement
+        for cap_col in cap_cols:
+            if cap_col in df_filtered.columns:
+                group_cols.append(cap_col)
+        
+        # Grouper par produit, centre et CAP, compter les occurrences
+        recurrence = df_filtered.groupby(group_cols, dropna=False).size().reset_index(name='nb_programmations')
         
         # Ajouter les colonnes supplémentaires via des agrégations (beaucoup plus efficace que iterrows)
         agg_dict = {}
@@ -145,9 +153,6 @@ if uploaded_file is not None:
             agg_dict[intitule_offre_col] = 'first'
         if region_col:
             agg_dict[region_col] = 'first'
-        # Ajouter toutes les colonnes CAP
-        for cap_col in cap_cols:
-            agg_dict[cap_col] = 'first'
         if cap_cols:
             agg_dict['CAP_COMBINED'] = 'first'
         if date_debut_col:
@@ -158,9 +163,9 @@ if uploaded_file is not None:
         
         if agg_dict:
             # Utiliser groupby avec agg pour récupérer les informations supplémentaires
-            info_supplementaire = df_filtered.groupby([produit_col, centre_col], dropna=False).agg(agg_dict).reset_index()
+            info_supplementaire = df_filtered.groupby(group_cols, dropna=False).agg(agg_dict).reset_index()
             # Merger avec le dataframe de récurrence
-            recurrence = recurrence.merge(info_supplementaire, on=[produit_col, centre_col], how='left')
+            recurrence = recurrence.merge(info_supplementaire, on=group_cols, how='left')
         
         # Réorganiser les colonnes pour un meilleur affichage
         colonnes_ordre = [produit_col]
