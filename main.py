@@ -339,11 +339,11 @@ if uploaded_file is not None:
             date_12mois = date_debut_ts + relativedelta(months=12)
             date_18mois = pd.Timestamp(date_fin_calculated)
             
-            # Compter les produits uniques dans chaque période
-            total_prog = df_temp[produit_col].nunique()
-            prog_0_6 = df_temp[(df_temp[date_debut_col] >= date_debut_ts) & (df_temp[date_debut_col] < date_6mois)][produit_col].nunique()
-            prog_6_12 = df_temp[(df_temp[date_debut_col] >= date_6mois) & (df_temp[date_debut_col] < date_12mois)][produit_col].nunique()
-            prog_12_18 = df_temp[(df_temp[date_debut_col] >= date_12mois) & (df_temp[date_debut_col] <= date_18mois)][produit_col].nunique()
+            # Compter les programmations (lignes) dans chaque période
+            total_prog = len(df_temp)
+            prog_0_6 = len(df_temp[(df_temp[date_debut_col] >= date_debut_ts) & (df_temp[date_debut_col] < date_6mois)])
+            prog_6_12 = len(df_temp[(df_temp[date_debut_col] >= date_6mois) & (df_temp[date_debut_col] < date_12mois)])
+            prog_12_18 = len(df_temp[(df_temp[date_debut_col] >= date_12mois) & (df_temp[date_debut_col] <= date_18mois)])
             
             # Calculer les pourcentages
             pct_0_6 = (prog_0_6 / total_prog * 100) if total_prog > 0 else 0
@@ -353,11 +353,11 @@ if uploaded_file is not None:
             # Afficher les métriques
             col_t1, col_t2, col_t3 = st.columns(3)
             with col_t1:
-                st.metric("0-6 mois", f"{pct_0_6:.1f}%", f"{prog_0_6} produits")
+                st.metric("0-6 mois", f"{pct_0_6:.1f}%", f"{prog_0_6} prog.")
             with col_t2:
-                st.metric("6-12 mois", f"{pct_6_12:.1f}%", f"{prog_6_12} produits")
+                st.metric("6-12 mois", f"{pct_6_12:.1f}%", f"{prog_6_12} prog.")
             with col_t3:
-                st.metric("12-18 mois", f"{pct_12_18:.1f}%", f"{prog_12_18} produits")
+                st.metric("12-18 mois", f"{pct_12_18:.1f}%", f"{prog_12_18} prog.")
         
         # Afficher le tableau principal (sans la colonne CENTRE)
         st.subheader("📋 Récurrence par produit")
