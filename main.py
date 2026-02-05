@@ -120,7 +120,8 @@ if uploaded_file is not None:
     region_col = find_column(df_filtered, [['libelle', 'région'], ['libellé', 'région']])
     
     # Identifier toutes les colonnes CAP (CAP1, CAP2, CAP3, etc.)
-    cap_cols = [col for col in df_filtered.columns if col.upper().startswith('CAP')]
+    # Exclure les colonnes qui ne sont pas CAP1/2/3/4/5 (comme CAPACITE, etc.)
+    cap_cols = [col for col in df_filtered.columns if col.upper().startswith('CAP') and col.upper() in ['CAP1', 'CAP2', 'CAP3', 'CAP4', 'CAP5']]
     
     # Créer une colonne combinée avec toutes les valeurs CAP uniques pour chaque ligne
     if cap_cols:
@@ -133,15 +134,11 @@ if uploaded_file is not None:
         cap1_col = None
     
     if centre_col and produit_col:
-        # Grouper par produit, centre ET les colonnes CAP pour différencier les programmations selon leurs CAP
+        # Grouper par produit, centre et CAP_COMBINED (pour distinguer les produits avec des CAP différents)
         group_cols = [produit_col, centre_col]
+        if cap_cols and 'CAP_COMBINED' in df_filtered.columns:
+            group_cols.append('CAP_COMBINED')
         
-        # Ajouter toutes les colonnes CAP au groupement
-        for cap_col in cap_cols:
-            if cap_col in df_filtered.columns:
-                group_cols.append(cap_col)
-        
-        # Grouper par produit, centre et CAP, compter les occurrences
         recurrence = df_filtered.groupby(group_cols, dropna=False).size().reset_index(name='nb_programmations')
         
         # Ajouter les colonnes supplémentaires via des agrégations (beaucoup plus efficace que iterrows)
@@ -153,7 +150,11 @@ if uploaded_file is not None:
             agg_dict[intitule_offre_col] = 'first'
         if region_col:
             agg_dict[region_col] = 'first'
-        if cap_cols:
+        # Ajouter toutes les colonnes CAP
+        for cap_col in cap_cols:
+            agg_dict[cap_col] = 'first'
+        # Ne pas ajouter CAP_COMBINED dans agg_dict si elle est déjà dans group_cols
+        if cap_cols and 'CAP_COMBINED' in df_filtered.columns and 'CAP_COMBINED' not in group_cols:
             agg_dict['CAP_COMBINED'] = 'first'
         if date_debut_col:
             agg_dict[date_debut_col] = 'min'  # Date de début la plus ancienne
@@ -289,10 +290,14 @@ if uploaded_file is not None:
         st.subheader("📊 Vue d'ensemble")
         m1, m2, m3, m4 = st.columns(4)
         
-        total_combos = len(recurrence_filtered)
-        combos_faible = len(recurrence_filtered[recurrence_filtered['nb_programmations'] < 3])
-        combos_bonne = len(recurrence_filtered[recurrence_filtered['nb_programmations'] >= 3])
-        taux_faible = (combos_faible / total_combos * 100) if total_combos > 0 else 0
+        # Compter le nombre de combinaisons uniques (produit, centre) sans tenir compte des CAP
+        total_combos = recurrence_filtered[[produit_col, centre_col]].drop_duplicates().shape[0]
+        
+        # Calculer la récurrence par PRODUIT (somme de toutes les programmations par produit)
+        recurrence_par_produit = recurrence_filtered.groupby(produit_col)['nb_programmations'].sum().reset_index()
+        combos_faible = len(recurrence_par_produit[recurrence_par_produit['nb_programmations'] < 3])
+        combos_bonne = len(recurrence_par_produit[recurrence_par_produit['nb_programmations'] >= 3])
+        taux_faible = (combos_faible / len(recurrence_par_produit) * 100) if len(recurrence_par_produit) > 0 else 0
         
         with m1:
             st.metric("Combinaisons produit/centre", total_combos)
